@@ -10,9 +10,9 @@ from tensorflow.keras.preprocessing.image import img_to_array
 app = Flask(__name__)
 cors = CORS(app)
 
-diabeticML = tf.keras.models.load_model('C:/Users/zas/Desktop/ahmed/Through-ur-eyes/ML/Diabetic.h5')
-anemiaML = tf.keras.models.load_model('C:/Users/zas/Desktop/ahmed/Through-ur-eyes/ML/model2.h5')
-hypertensionML = tf.keras.models.load_model('C:/Users/zas/Desktop/ahmed/Through-ur-eyes/ML/model3.pkl')
+diabeticML = tf.keras.models.load_model('D:/dep/Diabetic.h5')
+anemiaML = tf.keras.models.load_model('D:/dep/model2.h5')
+hypertensionML = tf.keras.models.load_model('D:/dep/model3.pkl')
 
 diabeticCategories = [
     ['No DR', 'tips 1'],
