@@ -1,93 +1,66 @@
-from flask import Flask, jsonify, request
-import joblib
-from keras.models import load_model
-import tensorflow as tf
+from flask import Flask, request, render_template, url_for, jsonify
+from tensorflow.keras.models import load_model
 from PIL import Image
-from flask_cors import CORS, cross_origin
 import numpy as np
-from tensorflow.keras.preprocessing.image import img_to_array
 
 app = Flask(__name__)
-cors = CORS(app)
 
-diabeticML = tf.keras.models.load_model('Diabetic.h5')
-anemiaML = tf.keras.models.load_model('model2.h5')
-hypertensionML = tf.keras.models.load_model('model3.pkl')
+def preprossing(image):
+    image=Image.open(image)
+    image = image.resize((150, 150))
+    image_arr = np.array(image.convert('RGB'))
+    image_arr.shape = (1, 150, 150, 3)
+    return image_arr
 
-diabeticCategories = [
-    ['No DR', 'tips 1'],
-    ['Mild', 'tips 2'], 
-    ['Moderate', 'tips 3'], 
-    ['Severe', 'tips 4'],
-    ['Proliferative DR', 'tips 5'],
-]
+classes = ['Buildings' ,'Forest', 'Glacier' ,'Mountain' ,'Sea' ,'Street']
+model=load_model("Intel_Image_Classification.h5")
 
-anemiaCategories = [
-    ['Anemia', 'tips 1'],
-    ['Non Anemia', 'tips 2'], 
-]
-# <h2 id="health-ratio">12.7 <sub>gdl</sub><sup>-1</sup></h2>
-hypertensionCategories = [
-    ['Normal', 'tips 1'],
-    ['Grade 1', 'tips 2'], 
-    ['Grade 2', 'tips 3'], 
-    ['Grade 3', 'tips 4'],
-    ['Grade 4', 'tips 5'],
-]
+@app.route('/')
+def index():
+
+    return render_template('index.html', appName="Intel Image Classification")
 
 
-@app.route('/predict/diabetic', methods=['POST'])
-def diabetic():
-    file = request.files['file']
-    img = Image.open(file.stream)
-    img = img.resize((150, 150))  # Resize the image to match the input shape of the model
-    img_array = img_to_array(img)
-    img_array /= 255.0  # Normalize the image
-    img_array = np.expand_dims(img_array, axis=0)  # Add an extra dimension to match the model's input shape
-
-    prediction = diabeticML.predict(img_array)[0]
-    index_ = np.argmax(prediction)
-
-    return jsonify({
-        'health': diabeticCategories[index_][0],
-        'tips': diabeticCategories[index_][1],
-    })
-
-
-@app.route('/predict/anemia', methods=['POST'])
-def anemia():
-    file = request.files['file']
-    img = Image.open(file.stream)
-    img = img.resize((150, 150))  # Resize the image to match the input shape of the model
-    img_array = img_to_array(img)
-    img_array /= 255.0  # Normalize the image
-    img_array = np.expand_dims(img_array, axis=0)  # Add an extra dimension to match the model's input shape
-
-    prediction = anemiaML.predict(img_array)[0]
-    index_ = np.argmax(prediction)
-
-    return jsonify({
-        'health': anemiaCategories[index_][0],
-        'tips': anemiaCategories[index_][1],
-    })
+@app.route('/predictApi', methods=["POST"])
+def api():
+    # Get the image from post request
+    try:
+        if 'fileup' not in request.files:
+            return "Please try again. The Image doesn't exist"
+        image = request.files.get('fileup')
+        image_arr = preprossing(image)
+        print("Model predicting ...")
+        result = model.predict(image_arr)
+        print("Model predicted")
+        ind = np.argmax(result)
+        prediction = classes[ind]
+        print(prediction)
+        return jsonify({'prediction': prediction})
+    except:
+        return jsonify({'Error': 'Error occur'})
 
 
-@app.route('/predict/hypertension', methods=['POST'])
-def hypertension():
-    file = request.files['file']
-    img = Image.open(file.stream)
-    img = img.resize((150, 150))  # Resize the image to match the input shape of the model
-    img_array = img_to_array(img)
-    img_array /= 255.0  # Normalize the image
-    img_array = np.expand_dims(img_array, axis=0)  # Add an extra dimension to match the model's input shape
+@app.route('/predict', methods=['GET', 'POST'])
+def predict():
+    print("run code")
+    if request.method == 'POST':
+        # Get the image from post request
+        print("image loading....")
+        image = request.files['fileup']
+        print("image loaded....")
+        image_arr= preprossing(image)
+        print("predicting ...")
+        result = model.predict(image_arr)
+        print("predicted ...")
+        ind = np.argmax(result)
+        prediction = classes[ind]
 
-    prediction = hypertensionML.predict(img_array)[0]
-    index_ = np.argmax(prediction)
+        print(prediction)
 
-    return jsonify({
-        'health': hypertensionCategories[index_][0],
-        'tips': hypertensionCategories[index_][1],
-    })
+        return render_template('index.html', prediction=prediction, image='static/IMG/', appName="Intel Image Classification")
+    else:
+        return render_template('index.html',appName="Intel Image Classification")
+
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
